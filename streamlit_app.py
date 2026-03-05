@@ -5,7 +5,7 @@ import streamlit as st
 # -----------------------------
 st.logo(
     "https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png", 
-    size="medium"
+    size="large"
 )
 
 # -----------------------------
