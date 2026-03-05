@@ -22,7 +22,7 @@ st.markdown(
         }
 
         [data-testid="stSidebarNav"]::before {
-            content: "Philippine Space Agency";
+            content: "Space Situational Awareness";
             font-size: 22px;
             font-weight: 600;
             display: block;
