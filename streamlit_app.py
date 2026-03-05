@@ -5,8 +5,9 @@ import streamlit as st
 # -----------------------------
 
 logo_url = "utils/Philsa_whitename_color.png"
+
 st.logo(
-    iamge= logo_url, 
+    image=logo_url,
     size="large"
 )
 
