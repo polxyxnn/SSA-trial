@@ -4,7 +4,8 @@ import os
 # -----------------------------
 # CONFIG
 # -----------------------------
-LOGO_PATH = "utils/PhilSA_v1-01.png"  # update if needed
+LOGO_PATH = "assets/phlsa_logo.png"  # change path if needed
+
 
 # -----------------------------
 # SIDEBAR STYLE
@@ -17,12 +18,10 @@ st.markdown(
         }
 
         /* Center image inside sidebar */
-        [data-testid="stSidebar"] [data-testid="stImage"] {
-            text-align: center;
+        [data-testid="stSidebar"] img {
             display: block;
             margin-left: auto;
             margin-right: auto;
-            width: 100%;
         }
 
         /* Center title text */
@@ -35,7 +34,7 @@ st.markdown(
 )
 
 # -----------------------------
-# SIDEBAR CONTENT
+# SIDEBAR HEADER (LOGO + TITLE)
 # -----------------------------
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
@@ -76,7 +75,6 @@ def logout():
 # PAGE DEFINITIONS
 # -----------------------------
 login_page = st.Page(login, title="Log in", icon=":material/login:")
-
 logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
 
 dashboard = st.Page(
