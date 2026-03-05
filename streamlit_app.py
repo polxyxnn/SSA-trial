@@ -4,7 +4,7 @@ import os
 # -----------------------------
 # CONFIG
 # -----------------------------
-LOGO_PATH = "assets/phlsa_logo.png"  # update if needed
+LOGO_PATH = "utils/PhilSA_v1-01.png"  # update if needed
 
 # -----------------------------
 # SIDEBAR STYLE
