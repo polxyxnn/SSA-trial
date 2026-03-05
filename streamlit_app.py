@@ -4,7 +4,7 @@ import os
 # -----------------------------
 # CONFIG
 # -----------------------------
-LOGO_PATH = "assets/phlsa_logo.png"  # change path if needed
+LOGO_PATH = "utils/PhilSA_v1-01.png"  # change path if needed
 
 
 # -----------------------------
