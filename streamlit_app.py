@@ -3,8 +3,10 @@ import streamlit as st
 # -----------------------------
 # LOGO
 # -----------------------------
+
+logo_url = "utils/Philsa_whitename_color.png"
 st.logo(
-    "https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png", 
+    iamge= logo_url, 
     size="large"
 )
 
