@@ -25,7 +25,7 @@ dashboard = st.Page(
 # )
 
 ssa_rocket = st.Page("SSA-tools/rocket.py", title="Rocket Launch", icon=":material/rocket_launch:")
-ssa_collision = st.Page("SSA-tools/collision.py", title="Collision", icon=":material/explosion:")
+ssa_collision = st.Page("SSA-tools/collision.py", title="Collision", icon=":material/compare_arrows:")
 
 if st.session_state.logged_in:
     pg = st.navigation(
