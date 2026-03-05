@@ -10,8 +10,8 @@ def add_logo():
             [data-testid="stSidebarNav"] {
                 background-image: url(https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png);
                 background-repeat: no-repeat;
-                background-position: 20px 20px;
-                padding-top: 120px;
+                background-position: 5px 5px;
+                padding-top: 10px;
             }
 
             [data-testid="stSidebarNav"]::before {
