@@ -1,48 +1,38 @@
 import streamlit as st
-import os
 
 # -----------------------------
-# CONFIG
+# SIDEBAR LOGO + TITLE
 # -----------------------------
-LOGO_PATH = "utils/PhilSA_v1-01.png"  # change path if needed
+def add_logo():
+    st.markdown(
+        """
+        <style>
+            [data-testid="stSidebarNav"] {
+                background-image: url(https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png);
+                background-repeat: no-repeat;
+                background-position: 20px 20px;
+                padding-top: 120px;
+            }
 
+            [data-testid="stSidebarNav"]::before {
+                content: "Philippine Space Agency";
+                margin-left: 20px;
+                margin-top: 20px;
+                font-size: 24px;
+                font-weight: 600;
+                position: relative;
+                top: 80px;
+            }
 
-# -----------------------------
-# SIDEBAR STYLE
-# -----------------------------
-st.markdown(
-    """
-    <style>
-        section[data-testid="stSidebar"] {
-            width: 300px !important;
-        }
+            section[data-testid="stSidebar"] {
+                width: 300px !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        /* Center image inside sidebar */
-        [data-testid="stSidebar"] img {
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Center title text */
-        [data-testid="stSidebar"] h1 {
-            text-align: center;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# -----------------------------
-# SIDEBAR HEADER (LOGO + TITLE)
-# -----------------------------
-with st.sidebar:
-    if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=250)
-    else:
-        st.warning("⚠️ Logo not found")
-
-    st.title("Philippine Space Agency")
+add_logo()
 
 
 # -----------------------------
@@ -100,7 +90,7 @@ ssa_collision = st.Page(
 # -----------------------------
 # NAVIGATION
 # -----------------------------
-if st.session_state.get("logged_in"):
+if st.session_state.logged_in:
     pg = st.navigation(
         {
             "Account": [logout_page],
