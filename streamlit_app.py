@@ -4,7 +4,7 @@ import streamlit as st
 # LOGO
 # -----------------------------
 
-logo_url = "utils/Philsa_whitename_color.png"
+logo_url = "utils/PhilSA_v1-01.png"
 
 st.logo(
     image=logo_url,
