@@ -1,39 +1,34 @@
 import streamlit as st
 
 # -----------------------------
-# SIDEBAR LOGO + TITLE
+# LOGO
 # -----------------------------
-def add_logo():
-    st.markdown(
-        """
-        <style>
-            [data-testid="stSidebarNav"] {
-                background-image: url(https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png);
-                background-repeat: no-repeat;
-                background-position: 5px 5px;
-                padding-top: 10px;
-            }
+st.logo(
+    "https://philsa.gov.ph/wp-content/themes/philsa/src/assets/images/logo.png"
+)
 
-            [data-testid="stSidebarNav"]::before {
-                content: "Philippine Space Agency";
-                margin-left: 20px;
-                margin-top: 20px;
-                font-size: 24px;
-                font-weight: 600;
-                position: relative;
-                top: 80px;
-            }
+# -----------------------------
+# SIDEBAR STYLE
+# -----------------------------
+st.markdown(
+    """
+    <style>
+        section[data-testid="stSidebar"] {
+            width: 300px !important;
+        }
 
-            section[data-testid="stSidebar"] {
-                width: 300px !important;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-add_logo()
-
+        [data-testid="stSidebarNav"]::before {
+            content: "Philippine Space Agency";
+            font-size: 22px;
+            font-weight: 600;
+            display: block;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # -----------------------------
 # SESSION STATE
@@ -43,7 +38,7 @@ if "logged_in" not in st.session_state:
 
 
 # -----------------------------
-# LOGIN / LOGOUT FUNCTIONS
+# LOGIN / LOGOUT
 # -----------------------------
 def login():
     st.title("Login")
@@ -62,7 +57,7 @@ def logout():
 
 
 # -----------------------------
-# PAGE DEFINITIONS
+# PAGES
 # -----------------------------
 login_page = st.Page(login, title="Log in", icon=":material/login:")
 logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
