@@ -11,6 +11,9 @@ import base64
 from shapely.geometry import Polygon
 from datetime import datetime, timedelta, date
 from streamlit_folium import st_folium
+
+StreamlitPage.run()
+
 # -----------------------------
 # LOGO
 # -----------------------------
