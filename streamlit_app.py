@@ -22,7 +22,7 @@ st.markdown(
         }
 
         [data-testid="stSidebarNav"]::before {
-            content: "Space Situational Awareness";
+            content: "Space Mission Control and Operations Division (SMCOD)";
             font-size: 22px;
             font-weight: 600;
             display: block;
@@ -94,7 +94,7 @@ if st.session_state.logged_in:
         {
             "Account": [logout_page],
             "Reports": [dashboard],
-            "Tools": [ssa_rocket, ssa_collision],
+            "SSA/STM Tools": [ssa_rocket, ssa_collision],
         }
     )
 else:
