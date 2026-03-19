@@ -12,110 +12,6 @@ from shapely.geometry import Polygon
 from datetime import datetime, timedelta, date
 from streamlit_folium import st_folium
 
-st.set_page_config(page_title="Rocket Launch Monitoring and Dropzone Mapping", page_icon="🚀")
-
-# # -----------------------------
-# # LOGO
-# # -----------------------------
-
-# logo_url = "utils/PhilSA_v5_White.png"
-
-# st.logo(
-#     image=logo_url,
-#     size="large"
-# )
-
-# # -----------------------------
-# # SIDEBAR STYLE
-# # -----------------------------
-# st.markdown(
-#     """
-#     <style>
-#         section[data-testid="stSidebar"] {
-#             width: 300px !important;
-#         }
-
-#         [data-testid="stSidebarNav"]::before {
-#             content: "Space Situational Awareness";
-#             font-size: 22px;
-#             font-weight: 600;
-#             display: block;
-#             text-align: center;
-#             margin-bottom: 20px;
-#         }
-#     </style>
-#     """,
-#     unsafe_allow_html=True
-# )
-
-# # -----------------------------
-# # SESSION STATE
-# # -----------------------------
-# if "logged_in" not in st.session_state:
-#     st.session_state.logged_in = False
-
-
-# # -----------------------------
-# # LOGIN / LOGOUT
-# # -----------------------------
-# def login():
-#     st.title("Login")
-
-#     if st.button("Log in"):
-#         st.session_state.logged_in = True
-#         st.rerun()
-
-
-# def logout():
-#     st.title("Logout")
-
-#     if st.button("Log out"):
-#         st.session_state.logged_in = False
-#         st.rerun()
-
-
-# # -----------------------------
-# # PAGES
-# # -----------------------------
-# login_page = st.Page(login, title="Log in", icon=":material/login:")
-# logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
-
-# dashboard = st.Page(
-#     "reports/dashboard.py",
-#     title="Dashboard",
-#     icon=":material/dashboard:",
-#     default=True
-# )
-
-# ssa_rocket = st.Page(
-#     "SSA-tools/rocket.py",
-#     title="Rocket Launch",
-#     icon=":material/rocket_launch:"
-# )
-
-# ssa_collision = st.Page(
-#     "SSA-tools/collision.py",
-#     title="Collision",
-#     icon=":material/compare_arrows:"
-# )
-
-
-# # -----------------------------
-# # NAVIGATION
-# # -----------------------------
-# if st.session_state.logged_in:
-#     pg = st.navigation(
-#         {
-#             "Account": [logout_page],
-#             "Reports": [dashboard],
-#             "Tools": [ssa_rocket, ssa_collision],
-#         }
-#     )
-# else:
-#     pg = st.navigation([login_page])
-
-# pg.run()
-
 # ====================== PDF SUPPORT ======================
 try:
     from pypdf import PdfReader
@@ -128,7 +24,7 @@ st.set_page_config(page_title="PhilSA Rocket Launch Monitoring", page_icon="🚀
 if "shape_dir" not in st.session_state:
     st.session_state.shape_dir = "utils/shapefiles"
 
-#LOGO_PATH = "utils/logos/PhilSA_v1_White.png"
+LOGO_PATH = "utils/logos/PhilSA_v1_White.png"
 
 # ====================== DYNAMIC DROPZONE STORAGE ======================
 if "dz_vertices" not in st.session_state:
@@ -196,34 +92,105 @@ def parse_coordinates(coord_str):
         return round(float(m.group(1)), 6), round(float(m.group(2)), 6)
     return None, None
 
+# def convert_to_compact(raw_str):
+#     if not raw_str or str(raw_str).strip() == "":
+#         return ""
+#     s = str(raw_str).upper().replace(" ", "").strip()
+#     m = re.match(r'^([NS])(\d{2})(\d{2})([EW])(\d{3})(\d{2})$', s)
+#     if m:
+#         return f"{m.group(1)}{m.group(2)}{m.group(3)}{m.group(4)}{m.group(5)}{m.group(6)}"
+#     m2 = re.search(r'([NS])\s*(\d{2})(\d{2})\s*([EW])\s*(\d{3})(\d{2})', s)
+#     if m2:
+#         return f"{m2.group(1)}{m2.group(2)}{m2.group(3)}{m2.group(4)}{m2.group(5)}{m2.group(6)}"
+#     latlon = parse_coordinates(raw_str)
+#     if not latlon or latlon[0] is None:
+#         return ""
+#     lat_dd, lon_dd = latlon
+#     def dd_to_compact(dd, is_lat=True):
+#         hemi = 'N' if (is_lat and dd >= 0) else 'S' if is_lat else 'E' if dd >= 0 else 'W'
+#         d = abs(dd)
+#         deg = int(d)
+#         minutes_full = (d - deg) * 60
+#         minute = int(minutes_full)
+#         sec = (minutes_full - minute) * 60
+#         if sec >= 30:
+#             minute += 1
+#             if minute == 60:
+#                 minute = 0
+#                 deg += 1
+#         return f"{hemi}{deg:02d}{minute:02d}" if is_lat else f"{hemi}{deg:03d}{minute:02d}"
+#     return dd_to_compact(lat_dd, True) + dd_to_compact(lon_dd, False)
+
 def convert_to_compact(raw_str):
     if not raw_str or str(raw_str).strip() == "":
         return ""
     s = str(raw_str).upper().replace(" ", "").strip()
-    m = re.match(r'^([NS])(\d{2})(\d{2})([EW])(\d{3})(\d{2})$', s)
-    if m:
-        return f"{m.group(1)}{m.group(2)}{m.group(3)}{m.group(4)}{m.group(5)}{m.group(6)}"
-    m2 = re.search(r'([NS])\s*(\d{2})(\d{2})\s*([EW])\s*(\d{3})(\d{2})', s)
-    if m2:
-        return f"{m2.group(1)}{m2.group(2)}{m2.group(3)}{m2.group(4)}{m2.group(5)}{m2.group(6)}"
-    latlon = parse_coordinates(raw_str)
-    if not latlon or latlon[0] is None:
-        return ""
-    lat_dd, lon_dd = latlon
-    def dd_to_compact(dd, is_lat=True):
-        hemi = 'N' if (is_lat and dd >= 0) else 'S' if is_lat else 'E' if dd >= 0 else 'W'
+
+    def dd_to_formatted(dd, is_lat=True):
+        hemi = 'N' if (is_lat and dd >= 0) else 'S' if is_lat else 'E' if (dd >= 0) else 'W'
         d = abs(dd)
         deg = int(d)
-        minutes_full = (d - deg) * 60
-        minute = int(minutes_full)
-        sec = (minutes_full - minute) * 60
-        if sec >= 30:
+        min_full = (d - deg) * 60
+        minute = int(min_full)
+        sec_full = (min_full - minute) * 60
+        sec = int(sec_full + 0.5)          # round to nearest second (half up)
+        if sec == 60:
+            sec = 0
             minute += 1
             if minute == 60:
                 minute = 0
                 deg += 1
-        return f"{hemi}{deg:02d}{minute:02d}" if is_lat else f"{hemi}{deg:03d}{minute:02d}"
-    return dd_to_compact(lat_dd, True) + dd_to_compact(lon_dd, False)
+        if is_lat:
+            return f"{hemi}{deg:02d} {minute:02d} {sec:02d}"
+        else:
+            return f"{hemi}{deg:03d} {minute:02d} {sec:02d}"
+
+    # === ENHANCED REGEX: now supports your exact format too ===
+    # Full DMS compact (with seconds) - catches "N123456E1234556" (after space removal)
+    m_full = re.match(r'^([NS])(\d{2})(\d{2})(\d{2})([EW])(\d{3})(\d{2})(\d{2})$', s)
+    if m_full:
+        g = m_full.groups()
+        has_sec = True
+    else:
+        # Original compact (no seconds)
+        m = re.match(r'^([NS])(\d{2})(\d{2})([EW])(\d{3})(\d{2})$', s)
+        if m:
+            g = m.groups()
+            has_sec = False
+        else:
+            # Fallback for any remaining spaced old format
+            m2 = re.search(r'([NS])\s*(\d{2})(\d{2})\s*([EW])\s*(\d{3})(\d{2})', s)
+            if m2:
+                g = m2.groups()
+                has_sec = False
+            else:
+                g = None
+
+    if g is not None:
+        if has_sec:
+            lat_h, lat_dg_str, lat_mn_str, lat_sc_str, lon_h, lon_dg_str, lon_mn_str, lon_sc_str = g
+            lat_dd = int(lat_dg_str) + int(lat_mn_str) / 60 + int(lat_sc_str) / 3600
+            if lat_h == "S":
+                lat_dd = -lat_dd
+            lon_dd = int(lon_dg_str) + int(lon_mn_str) / 60 + int(lon_sc_str) / 3600
+            if lon_h == "W":
+                lon_dd = -lon_dd
+        else:
+            lat_h, lat_dg_str, lat_mn_str, lon_h, lon_dg_str, lon_mn_str = g
+            lat_dd = int(lat_dg_str) + int(lat_mn_str) / 60
+            if lat_h == "S":
+                lat_dd = -lat_dd
+            lon_dd = int(lon_dg_str) + int(lon_mn_str) / 60
+            if lon_h == "W":
+                lon_dd = -lon_dd
+        return dd_to_formatted(lat_dd, True) + " " + dd_to_formatted(lon_dd, False)
+
+    # === Fallback to your existing parse_coordinates (unchanged) ===
+    latlon = parse_coordinates(raw_str)
+    if not latlon or latlon[0] is None:
+        return ""
+    lat_dd, lon_dd = latlon
+    return dd_to_formatted(lat_dd, True) + " " + dd_to_formatted(lon_dd, False)
 
 def utc_window_to_phst(window_utc: str) -> str:
     try:
@@ -444,7 +411,7 @@ def create_folium_map(launch_site_value, dropzones, shape_dir):
     return m
 
 # ====================== MAIN APP ======================
-# st.title("Rocket Launch Monitoring and Dropzone Mapping")
+st.title("Rocket Launch Monitoring and Dropzone Mapping")
 
 # ====================== LIVE MAP PREVIEW (AT THE TOP) ======================
 st.subheader("📍 Live Rocket Launch Dropzone Map")
