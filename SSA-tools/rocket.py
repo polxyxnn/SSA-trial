@@ -7,7 +7,6 @@ import zipfile
 import pandas as pd
 import geopandas as gpd
 import folium
-import base64
 from shapely.geometry import Polygon
 from datetime import datetime, timedelta, date
 from streamlit_folium import st_folium
@@ -20,16 +19,20 @@ except ImportError:
 
 st.set_page_config(page_title="PhilSA Rocket Launch Monitoring", page_icon="🚀", layout="wide")
 
-# ====================== SAFE PATHS ======================
+# ====================== SAFE PATHS (NOW MATCHES YOUR REAL STRUCTURE) ======================
+# rocket.py is inside SSA-tools/, utils/ is sibling (outside SSA-tools)
 if "shape_dir" not in st.session_state:
-    st.session_state.shape_dir = "utils/shapefiles"
-
-# LOGO_PATH = "utils/logos/PhilSA_v1_White.png"
+    script_dir = os.path.dirname(os.path.abspath(__file__))      # → SSA-tools/
+    parent_dir = os.path.dirname(script_dir)                     # → Your_Workspace_Root/
+    st.session_state.shape_dir = os.path.join(parent_dir, "utils", "shapefiles")
+    
+    # Remove this line after you confirm it works
+    st.info(f"🔍 Shapefiles folder resolved to: **{st.session_state.shape_dir}**")
 
 # ====================== DYNAMIC DROPZONE STORAGE ======================
 if "dz_vertices" not in st.session_state:
     st.session_state.dz_vertices = {f"DZ{i}": [""] * 5 for i in range(1, 5)}
-    st.session_state.dz_debris   = {f"DZ{i}": [""] * 2 for i in range(1, 5)}   # ← CHANGED: start with 2
+    st.session_state.dz_debris   = {f"DZ{i}": [""] * 2 for i in range(1, 5)}
 
 if "pending_notam_fill" not in st.session_state:
     st.session_state.pending_notam_fill = None
@@ -37,12 +40,10 @@ if "pending_notam_fill" not in st.session_state:
 # Keep lists in sync
 for i in range(1, 5):
     dz = f"DZ{i}"
-    # Vertices
     for idx in range(len(st.session_state.dz_vertices[dz])):
         key = f"{dz}_vert_{idx}"
         if key in st.session_state:
             st.session_state.dz_vertices[dz][idx] = st.session_state[key]
-    # Debris (dynamic length)
     for j in range(len(st.session_state.dz_debris[dz])):
         key = f"{dz}_deb_{j}"
         if key in st.session_state:
@@ -92,35 +93,6 @@ def parse_coordinates(coord_str):
         return round(float(m.group(1)), 6), round(float(m.group(2)), 6)
     return None, None
 
-# def convert_to_compact(raw_str):
-#     if not raw_str or str(raw_str).strip() == "":
-#         return ""
-#     s = str(raw_str).upper().replace(" ", "").strip()
-#     m = re.match(r'^([NS])(\d{2})(\d{2})([EW])(\d{3})(\d{2})$', s)
-#     if m:
-#         return f"{m.group(1)}{m.group(2)}{m.group(3)}{m.group(4)}{m.group(5)}{m.group(6)}"
-#     m2 = re.search(r'([NS])\s*(\d{2})(\d{2})\s*([EW])\s*(\d{3})(\d{2})', s)
-#     if m2:
-#         return f"{m2.group(1)}{m2.group(2)}{m2.group(3)}{m2.group(4)}{m2.group(5)}{m2.group(6)}"
-#     latlon = parse_coordinates(raw_str)
-#     if not latlon or latlon[0] is None:
-#         return ""
-#     lat_dd, lon_dd = latlon
-#     def dd_to_compact(dd, is_lat=True):
-#         hemi = 'N' if (is_lat and dd >= 0) else 'S' if is_lat else 'E' if dd >= 0 else 'W'
-#         d = abs(dd)
-#         deg = int(d)
-#         minutes_full = (d - deg) * 60
-#         minute = int(minutes_full)
-#         sec = (minutes_full - minute) * 60
-#         if sec >= 30:
-#             minute += 1
-#             if minute == 60:
-#                 minute = 0
-#                 deg += 1
-#         return f"{hemi}{deg:02d}{minute:02d}" if is_lat else f"{hemi}{deg:03d}{minute:02d}"
-#     return dd_to_compact(lat_dd, True) + dd_to_compact(lon_dd, False)
-
 def convert_to_compact(raw_str):
     if not raw_str or str(raw_str).strip() == "":
         return ""
@@ -133,7 +105,7 @@ def convert_to_compact(raw_str):
         min_full = (d - deg) * 60
         minute = int(min_full)
         sec_full = (min_full - minute) * 60
-        sec = int(sec_full + 0.5)          # round to nearest second (half up)
+        sec = int(sec_full + 0.5)
         if sec == 60:
             sec = 0
             minute += 1
@@ -145,20 +117,16 @@ def convert_to_compact(raw_str):
         else:
             return f"{hemi}{deg:03d} {minute:02d} {sec:02d}"
 
-    # === ENHANCED REGEX: now supports your exact format too ===
-    # Full DMS compact (with seconds) - catches "N123456E1234556" (after space removal)
     m_full = re.match(r'^([NS])(\d{2})(\d{2})(\d{2})([EW])(\d{3})(\d{2})(\d{2})$', s)
     if m_full:
         g = m_full.groups()
         has_sec = True
     else:
-        # Original compact (no seconds)
         m = re.match(r'^([NS])(\d{2})(\d{2})([EW])(\d{3})(\d{2})$', s)
         if m:
             g = m.groups()
             has_sec = False
         else:
-            # Fallback for any remaining spaced old format
             m2 = re.search(r'([NS])\s*(\d{2})(\d{2})\s*([EW])\s*(\d{3})(\d{2})', s)
             if m2:
                 g = m2.groups()
@@ -170,22 +138,17 @@ def convert_to_compact(raw_str):
         if has_sec:
             lat_h, lat_dg_str, lat_mn_str, lat_sc_str, lon_h, lon_dg_str, lon_mn_str, lon_sc_str = g
             lat_dd = int(lat_dg_str) + int(lat_mn_str) / 60 + int(lat_sc_str) / 3600
-            if lat_h == "S":
-                lat_dd = -lat_dd
+            if lat_h == "S": lat_dd = -lat_dd
             lon_dd = int(lon_dg_str) + int(lon_mn_str) / 60 + int(lon_sc_str) / 3600
-            if lon_h == "W":
-                lon_dd = -lon_dd
+            if lon_h == "W": lon_dd = -lon_dd
         else:
             lat_h, lat_dg_str, lat_mn_str, lon_h, lon_dg_str, lon_mn_str = g
             lat_dd = int(lat_dg_str) + int(lat_mn_str) / 60
-            if lat_h == "S":
-                lat_dd = -lat_dd
+            if lat_h == "S": lat_dd = -lat_dd
             lon_dd = int(lon_dg_str) + int(lon_mn_str) / 60
-            if lon_h == "W":
-                lon_dd = -lon_dd
+            if lon_h == "W": lon_dd = -lon_dd
         return dd_to_formatted(lat_dd, True) + " " + dd_to_formatted(lon_dd, False)
 
-    # === Fallback to your existing parse_coordinates (unchanged) ===
     latlon = parse_coordinates(raw_str)
     if not latlon or latlon[0] is None:
         return ""
@@ -234,11 +197,9 @@ def extract_notam_data(uploaded_file):
         if len(coord_strings) > 3 and coord_strings[0] == coord_strings[-1]:
             coord_strings = coord_strings[:-1]
 
-        # B) from this PDF (start time)
         b_match = re.search(r'B\)\s*(\d{10})', text_upper)
         b_time = b_match.group(1)[-4:] if b_match and len(b_match.group(1)) >= 10 else ""
 
-        # C) from this PDF (end time)
         c_match = re.search(r'C\)\s*(\d{10})', text_upper)
         c_time = c_match.group(1)[-4:] if c_match and len(c_match.group(1)) >= 10 else ""
         if not c_time:
@@ -246,10 +207,7 @@ def extract_notam_data(uploaded_file):
             if c_range:
                 c_time = c_range.group(2)
 
-        return coord_strings, {
-            "b_time": b_time,
-            "c_time": c_time
-        }
+        return coord_strings, {"b_time": b_time, "c_time": c_time}
     except Exception as e:
         st.error(f"Error parsing {uploaded_file.name}: {str(e)}")
         return [], {"b_time": "", "c_time": ""}
@@ -258,15 +216,22 @@ def extract_notam_data(uploaded_file):
 @st.cache_data
 def load_mapping_data(shape_dir: str):
     data = {}
+    
     csv_path = os.path.join(shape_dir, "Launch_Centers_Coords.csv")
     if os.path.exists(csv_path):
-        df = pd.read_csv(csv_path)
-        data["launch_sites"] = {str(row["Place"]).strip(): (float(row["Lat"]), float(row["Lon"])) for _, row in df.iterrows()}
+        try:
+            df = pd.read_csv(csv_path)
+            data["launch_sites"] = {str(row["Place"]).strip(): (float(row["Lat"]), float(row["Lon"])) 
+                                   for _, row in df.iterrows()}
+        except Exception as e:
+            st.warning(f"⚠️ Could not read Launch_Centers_Coords.csv: {e}")
+            data["launch_sites"] = {}
     else:
+        st.warning(f"⚠️ Missing: Launch_Centers_Coords.csv")
         data["launch_sites"] = {}
 
     key_path = os.path.join(shape_dir, "Updated_Key_Locations.shp")
-    key_locations = {}
+    data["key_locations"] = {}
     if os.path.exists(key_path):
         try:
             key_gdf = gpd.read_file(key_path)
@@ -278,14 +243,17 @@ def load_mapping_data(shape_dir: str):
             for idx, row in key_gdf.iterrows():
                 if row.geometry and row.geometry.geom_type == "Point":
                     label = str(row[name_field]).strip() if name_field else f"Key_{idx}"
-                    key_locations[label] = (row.geometry.y, row.geometry.x)
-        except:
-            pass
-    data["key_locations"] = key_locations
+                    data["key_locations"][label] = (row.geometry.y, row.geometry.x)
+            st.success(f"✅ Loaded {len(data['key_locations'])} key locations")
+        except Exception as e:
+            st.warning(f"⚠️ Failed to load Updated_Key_Locations.shp: {e}")
+    else:
+        st.warning(f"⚠️ Missing shapefile: Updated_Key_Locations.shp (or .shx/.dbf/.prj)")
 
     data["manila_fir"] = os.path.join(shape_dir, "Manila_FIR_boundary.shp")
-    data["baseline"] = os.path.join(shape_dir, "PH_Baseline.shp")
-    data["eez"] = os.path.join(shape_dir, "eez.shp")
+    data["baseline"]   = os.path.join(shape_dir, "PH_Baseline.shp")
+    data["eez"]        = os.path.join(shape_dir, "eez.shp")
+    
     return data
 
 def create_folium_map(launch_site_value, dropzones, shape_dir):
@@ -319,26 +287,30 @@ def create_folium_map(launch_site_value, dropzones, shape_dir):
         folium.Marker([lat, lon], popup=name,
                       icon=folium.Icon(color="red", icon="location-crosshairs", prefix="fa")).add_to(m)
 
-    for path, color, weight, fill in [
-        (loaded["manila_fir"], "darkblue", 1.5, False),
-        (loaded["baseline"], "gold", 1.5, False),
-        (loaded["eez"], "blue", 1.5, True)
+    for path, color, weight, fill, name in [
+        (loaded["manila_fir"], "darkblue", 1.5, False, "Manila FIR"),
+        (loaded["baseline"],   "gold",     1.5, False, "PH Baseline"),
+        (loaded["eez"],        "blue",     1.5, True,  "PH EEZ")
     ]:
-        if os.path.exists(path):
-            try:
-                gdf = gpd.read_file(path)
-                for _, row in gdf.iterrows():
-                    geom = row.geometry
-                    if not geom: continue
-                    polys = [geom] if geom.geom_type == "Polygon" else list(geom.geoms) if hasattr(geom, "geoms") else []
-                    for poly in polys:
-                        x, y = poly.exterior.xy
-                        if fill:
-                            folium.Polygon(list(zip(y, x)), color=color, weight=weight, fill=True, fill_opacity=0.05).add_to(m)
-                        else:
-                            folium.PolyLine(list(zip(y, x)), color=color, weight=weight).add_to(m)
-            except:
-                pass
+        if not os.path.exists(path):
+            st.warning(f"⚠️ Missing boundary: {name} ({os.path.basename(path)})")
+            continue
+        try:
+            gdf = gpd.read_file(path)
+            st.success(f"✅ Loaded {name}")
+            for _, row in gdf.iterrows():
+                geom = row.geometry
+                if not geom: continue
+                polys = [geom] if geom.geom_type == "Polygon" else list(geom.geoms) if hasattr(geom, "geoms") else []
+                for poly in polys:
+                    x, y = poly.exterior.xy
+                    if fill:
+                        folium.Polygon(list(zip(y, x)), color=color, weight=weight, fill=True, fill_opacity=0.05).add_to(m)
+                    else:
+                        folium.PolyLine(list(zip(y, x)), color=color, weight=weight).add_to(m)
+        except Exception as e:
+            st.error(f"❌ Failed to load {name}: {str(e)}")
+            st.caption("Tip: All 4 files (.shp + .shx + .dbf + .prj) must be present.")
 
     colors = ['darkgreen', 'green', 'darkblue', 'purple']
     for idx, (dzid, pts) in enumerate(polygons):
@@ -351,6 +323,7 @@ def create_folium_map(launch_site_value, dropzones, shape_dir):
             folium.Marker([lat, lon], popup=f"{dzid} debris {di+1}",
                           icon=folium.Icon(color="black", icon="trash", prefix="fa")).add_to(m)
 
+    # Rocket ground track
     def polygon_centroid(pts):
         poly = Polygon([(lon, lat) for lat, lon in pts])
         c = poly.centroid
@@ -388,14 +361,7 @@ def create_folium_map(launch_site_value, dropzones, shape_dir):
         folium.PolyLine(route, color="black", weight=2, dash_array="5,10", popup="Rocket Ground Track").add_to(m)
 
     legend = """
-    <div style="
-        position: fixed; 
-        bottom: 50px; left: 50px; width: 250px; height: 250px; 
-        z-index:9999; font-size:14px;
-        background-color:#87CEEB;
-        border:2px solid black;
-        padding: 10px;
-        ">
+    <div style="position: fixed; bottom: 50px; left: 50px; width: 250px; height: 250px; z-index:9999; font-size:14px; background-color:#87CEEB; border:2px solid black; padding: 10px;">
     <b>Legend</b><br>
     <i class="fa fa-rocket fa-2x" style="color:green"></i> Launch Site<br>
     <i class="fa fa-location-crosshairs fa-2x" style="color:red"></i> Key Locations<br>
@@ -413,7 +379,6 @@ def create_folium_map(launch_site_value, dropzones, shape_dir):
 # ====================== MAIN APP ======================
 st.title("Rocket Launch Monitoring and Dropzone Mapping")
 
-# ====================== LIVE MAP PREVIEW (AT THE TOP) ======================
 st.subheader("📍 Live Rocket Launch Dropzone Map")
 st.caption("Updates automatically as you edit dropzones, launch info, or upload NOTAM PDFs")
 
@@ -432,72 +397,18 @@ live_map = create_folium_map(
 )
 st_folium(live_map, width=1400, height=750, returned_objects=[], key="live_map_preview")
 
-# # ====================== SIDEBAR ======================
-# st.markdown(
-#     """
-#     <style>
-#         section[data-testid="stSidebar"] {
-#             width: 300px !important;
-#         }
-
-#         /* Center image inside sidebar */
-#         [data-testid="stSidebar"] [data-testid="stImage"] {
-#             text-align: center;
-#             display: block;
-#             margin-left: auto;
-#             margin-right: auto;
-#             width: 100%;
-#         }
-
-#         /* Center title text */
-#         [data-testid="stSidebar"] h1 {
-#             text-align: center;
-#         }
-#     </style>
-#     """,
-#     unsafe_allow_html=True
-# )
-
-# with st.sidebar:
-#     if os.path.exists(LOGO_PATH):
-#         st.image(LOGO_PATH, width=250)  # 500 is too large for 300px sidebar
-#     else:
-#         st.warning("⚠️ Logo not found")
-
-#     st.title("Philippine Space Agency")
-#     st.subheader("🚀 Rocket Launch Monitoring")  
-
-#     selected_page = st.radio(
-#         "Go to",
-#         options=[
-#             "🚀 Launch Monitoring",
-#             "📄 NOTAM Tools",
-#             "📊 Reports & History",
-#             "⚙️ Settings"
-#         ],
-#         key="nav_page"
-#     )
-
 launch_sites = ["Select...", "Hainan International Commercial Launch Center", "Jiuquan Satellite Launch Center",
                 "Wenchang Space Launch Site", "Xichang Satellite Launch Center",
                 "Naro Space Center", "Sohae Satellite Launching Station", "Unchinoura Space Center", "Other"]
 countries = ["Select...", "People's Republic of China", "Japan",
              "Democratic People's Republic of Korea", "Republic of Korea"]
 
-# ====================== APPLY PENDING NOTAM FILL ======================
 if st.session_state.get("pending_notam_fill"):
     fill = st.session_state.pending_notam_fill
-    if fill.get("mission"):
-        st.session_state.mission = fill["mission"]
-    if fill.get("country") and fill["country"] in countries:
-        st.session_state.launch_country = fill["country"]
-    if fill.get("start_time"):
-        st.session_state.start_time = fill["start_time"]
-    if fill.get("end_time"):
-        st.session_state.end_time = fill["end_time"]
+    if fill.get("start_time"): st.session_state.start_time = fill["start_time"]
+    if fill.get("end_time"): st.session_state.end_time = fill["end_time"]
     st.session_state.pending_notam_fill = None
 
-# ====================== FORM ======================
 with st.form("rocket_launch_form"):
     st.subheader("🛰 Launch Information")
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -513,16 +424,10 @@ with st.form("rocket_launch_form"):
     submitted = st.form_submit_button("🚀 Submit – Generate Files (ZIP + Excel + CSV)", 
                                       type="primary", use_container_width=True)
 
-# ====================== NOTAM PDF IMPORT ======================
 st.subheader("📄 Import Dropzones from FAA NOTAM PDF(s)")
 st.caption("**Each PDF = one dropzone** (1st PDF → DZ1, 2nd → DZ2, etc.)")
 
-uploaded_pdfs = st.file_uploader(
-    "Upload NOTAM PDF file(s)",
-    type="pdf",
-    accept_multiple_files=True,
-    key="notam_uploader"
-)
+uploaded_pdfs = st.file_uploader("Upload NOTAM PDF file(s)", type="pdf", accept_multiple_files=True, key="notam_uploader")
 
 if uploaded_pdfs:
     st.info(f"📌 {len(uploaded_pdfs)} PDF(s) selected")
@@ -530,59 +435,35 @@ if uploaded_pdfs:
         processed = 0
         overall_start = ""
         overall_end = ""
-
         for pdf_idx, pdf_file in enumerate(uploaded_pdfs):
             coord_strings, meta = extract_notam_data(pdf_file)
-
-            if pdf_idx == 0:
-                overall_start = meta.get("b_time", "")
+            if pdf_idx == 0: overall_start = meta.get("b_time", "")
             overall_end = meta.get("c_time", "")
-
-            if processed < 4:
-                if coord_strings and len(coord_strings) >= 3:
-                    dz_key = f"DZ{processed + 1}"
-                    st.session_state.dz_vertices[dz_key] = coord_strings[:]
-                    for idx, val in enumerate(coord_strings):
-                        st.session_state[f"{dz_key}_vert_{idx}"] = val
-                    for idx in range(len(coord_strings), 10):
-                        key = f"{dz_key}_vert_{idx}"
-                        if key in st.session_state:
-                            del st.session_state[key]
-                    processed += 1
-
+            if processed < 4 and coord_strings and len(coord_strings) >= 3:
+                dz_key = f"DZ{processed + 1}"
+                st.session_state.dz_vertices[dz_key] = coord_strings[:]
+                for idx, val in enumerate(coord_strings):
+                    st.session_state[f"{dz_key}_vert_{idx}"] = val
+                processed += 1
         if overall_start or overall_end or processed > 0:
-            st.session_state.pending_notam_fill = {
-                "start_time": overall_start,
-                "end_time": overall_end
-            }
-            st.success(f"✅ Done! Start (B from 1st PDF) = **{overall_start or '—'}** | "
-                       f"End (C from last PDF) = **{overall_end or '—'}** | "
-                       f"Dropzones filled: {processed}")
+            st.session_state.pending_notam_fill = {"start_time": overall_start, "end_time": overall_end}
+            st.success(f"✅ Done! Start = **{overall_start or '—'}** | End = **{overall_end or '—'}** | Dropzones filled: {processed}")
             st.rerun()
 
-# ====================== DYNAMIC DROPZONES ======================
 st.subheader("🌍 Dropzones DZ1–DZ4")
-
 for i in range(1, 5):
     dz = f"DZ{i}"
     with st.expander(f"**Dropzone {i}**", expanded=(i == 1)):
         st.caption("**Vertices** (min 3 recommended)")
         current_verts = st.session_state.dz_vertices[dz]
         for idx in range(len(current_verts)):
-            st.text_input(
-                label=f"Vertex {idx+1}",
-                value=current_verts[idx],
-                key=f"{dz}_vert_{idx}",
-                placeholder="193600N 1183100E"
-            )
+            st.text_input(label=f"Vertex {idx+1}", value=current_verts[idx], key=f"{dz}_vert_{idx}", placeholder="193600N 1183100E")
         col_add, col_rem, _ = st.columns([1, 1, 4])
         with col_add:
             if st.button("➕ Add Vertex", key=f"add_v_{dz}", use_container_width=True):
                 if len(current_verts) < 10:
                     st.session_state.dz_vertices[dz].append("")
                     st.rerun()
-                else:
-                    st.warning("Maximum 10 vertices")
         with col_rem:
             if len(current_verts) > 3 and st.button("➖ Remove Last", key=f"rem_v_{dz}", use_container_width=True):
                 st.session_state.dz_vertices[dz].pop()
@@ -591,27 +472,18 @@ for i in range(1, 5):
         st.caption("**Debris Points** (min 2, max 4)")
         current_deb = st.session_state.dz_debris[dz]
         for idx in range(len(current_deb)):
-            st.text_input(
-                label=f"Debris {idx+1}",
-                value=current_deb[idx],
-                key=f"{dz}_deb_{idx}",
-                placeholder="14.5N 120.5E"
-            )
-
+            st.text_input(label=f"Debris {idx+1}", value=current_deb[idx], key=f"{dz}_deb_{idx}", placeholder="14.5N 120.5E")
         col_add_d, col_rem_d, _ = st.columns([1, 1, 4])
         with col_add_d:
             if st.button("➕ Add Debris", key=f"add_d_{dz}", use_container_width=True):
                 if len(current_deb) < 4:
                     st.session_state.dz_debris[dz].append("")
                     st.rerun()
-                else:
-                    st.warning("Maximum 4 debris points per dropzone")
         with col_rem_d:
             if len(current_deb) > 2 and st.button("➖ Remove Last", key=f"rem_d_{dz}", use_container_width=True):
                 removed_idx = len(st.session_state.dz_debris[dz]) - 1
                 stale_key = f"{dz}_deb_{removed_idx}"
-                if stale_key in st.session_state:
-                    del st.session_state[stale_key]
+                if stale_key in st.session_state: del st.session_state[stale_key]
                 st.session_state.dz_debris[dz].pop()
                 st.rerun()
 
@@ -625,10 +497,7 @@ if submitted:
     dropzones = {}
     for i in range(1, 5):
         dz_key = f"DZ{i}"
-        dropzones[dz_key] = {
-            "vertices": st.session_state.dz_vertices[dz_key].copy(),
-            "debris": st.session_state.dz_debris[dz_key].copy()
-        }
+        dropzones[dz_key] = {"vertices": st.session_state.dz_vertices[dz_key].copy(), "debris": st.session_state.dz_debris[dz_key].copy()}
 
     for dz_id, dz in dropzones.items():
         valid_verts = [p.strip() for p in dz["vertices"] if p.strip()]
@@ -648,7 +517,7 @@ if submitted:
     deb_compact = []
     for i in range(1, 5):
         comp = [convert_to_compact(c) for c in dropzones[f"DZ{i}"]["debris"]]
-        comp += [""] * (4 - len(comp))          # pad to exactly 4
+        comp += [""] * (4 - len(comp))
         deb_compact.append(comp)
 
     date_str = st.session_state.launch_date.strftime("%m%d%y")
